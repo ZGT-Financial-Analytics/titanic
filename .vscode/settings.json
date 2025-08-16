@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "python",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "train",
+      "type": "shell",
+      "command": "python src/train.py --train_csv data/raw/train.csv --model_out models/titanic.joblib",
+      "problemMatcher": []
+    },
+    {
+      "label": "predict",
+      "type": "shell",
+      "command": "python src/predict.py --test_csv data/raw/test.csv --model models/titanic.joblib --out_csv submission.csv",
+      "problemMatcher": []
+    }
+  ]
+}

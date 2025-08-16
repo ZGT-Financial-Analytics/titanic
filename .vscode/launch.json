@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Train (debug)",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/train.py",
+      "args": [
+        "--train_csv",
+        "${workspaceFolder}/data/raw/train.csv",
+        "--model_out",
+        "${workspaceFolder}/models/titanic.joblib"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
