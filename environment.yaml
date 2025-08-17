@@ -1,7 +1,7 @@
-
 name: titanic
 dependencies:
-	- pandas
-	- numpy
-	- scikit-learn
-	- joblib
+  - matplotlib
+  - pandas
+  - numpy
+  - scikit-learn
+  - joblib
