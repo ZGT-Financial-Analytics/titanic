@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Train (debug)",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/src/train.py",
       "args": [
