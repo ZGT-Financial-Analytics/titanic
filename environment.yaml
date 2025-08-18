@@ -5,3 +5,4 @@ dependencies:
   - numpy
   - scikit-learn
   - joblib
+  - ipykernel
