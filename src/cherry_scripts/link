@@ -1,5 +1,0 @@
-def totemic_link(x):
-    print("Linking in", x, "seconds")
-
-
-Linking = totemic_link(3)
