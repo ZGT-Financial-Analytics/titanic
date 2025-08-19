@@ -26,4 +26,3 @@ axes[2].set_ylabel("Y label")
 
 plt.tight_layout()
 plt.show()
-plt.close("all")
