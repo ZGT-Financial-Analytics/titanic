@@ -2,4 +2,3 @@
 data/
 /titanic.code-workspace
 *.env
-.gitignore
