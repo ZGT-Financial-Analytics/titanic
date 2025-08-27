@@ -1,5 +1,11 @@
 from __future__ import annotations
 from pathlib import Path
+from titanic.paths import (
+    ROOT,
+    RAW,
+    TRAIN_CSV,
+    TEST_CSV,
+)  # and whatever common files that were defined in the src/paths.py
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,7 +13,7 @@ import matplotlib.pyplot as plt
 # Make `src/` importable without packaging (editable install is nicer, but this is lean)
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
-from paths import ROOT, TRAIN_CSV  # noqa: E402
+from titanic.paths import ROOT, TRAIN_CSV  # noqa: E402
 
 # ---------- options ----------
 # Arrow-backed dtypes: consistent nullable ints/strings + fast IO

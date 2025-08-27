@@ -1,11 +1,16 @@
 from __future__ import annotations
+from titanic.paths import (
+    ROOT,
+    RAW,
+    TRAIN_CSV,
+    TEST_CSV,
+)  # and whatever common files that were defined in the src/paths.py
 from pathlib import Path
 import sys
 import pandas as pd
 
 # import shared paths from src/
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
-from paths import TRAIN_CSV, TEST_CSV  # noqa: E402
 
 # Check that the data files exist
 # %%
