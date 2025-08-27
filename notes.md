@@ -5,7 +5,7 @@ This file should be ignored in .gitignore!
 
 Workflow
 
-(step number is in the file name for easier team viewing)
+(step number is in the file name for easier team viewing -- not only does it show the step wise usage of these scripts, but it also reorders them in our script folder for visual cues)
 
 1. We first will load our data in with clean path objects using src/paths.py
 2. We'll then do a variety of sanity checking on our loaded data using our scripts/01_data_check.py script
