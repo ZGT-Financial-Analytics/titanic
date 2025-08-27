@@ -7,6 +7,11 @@ import pandas as pd
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 from paths import TRAIN_CSV, TEST_CSV  # noqa: E402
 
+# Check that the data files exist
+# %%
+print("TRAIN_CSV:", TRAIN_CSV.exists(), TRAIN_CSV)
+print("TEST_CSV:", TEST_CSV.exists(), TEST_CSV)
+
 pd.set_option("mode.dtype_backend", "pyarrow")
 
 # --- load both files ---
@@ -67,3 +72,5 @@ assert_same_columns(test, expected_test, "test")
 assert "Survived" not in test.columns, "Leakage: test set must not contain 'Survived'"
 
 print("Column checks passed.")
+
+# %%
