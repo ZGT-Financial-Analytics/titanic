@@ -1,8 +1,16 @@
-name: titanic
+# environment.yml
+name: titanic312
+channels: [conda-forge]
 dependencies:
-  - matplotlib
-  - pandas
+  - python=3.12
+  - pandas=2.3.*
+  - pyarrow=17.*
+  - arrow-cpp=17.*
+  - vs2015_runtime
   - numpy
   - scikit-learn
-  - joblib
-  - pyarrow
+  - jupyterlab
+  - ipykernel
+  - pip
+  - pip:
+      - -e .

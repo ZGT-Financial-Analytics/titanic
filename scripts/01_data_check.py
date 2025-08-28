@@ -1,37 +1,34 @@
 from __future__ import annotations
-from titanic.paths import (
-    ROOT,
-    RAW,
+
+# %%
+from titanic_lab.paths import (
     TRAIN_CSV,
     TEST_CSV,
 )  # and whatever common files that were defined in the src/paths.py
-from pathlib import Path
-import sys
 import pandas as pd
 
-# import shared paths from src/
-sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
 # Check that the data files exist
 # %%
 print("TRAIN_CSV:", TRAIN_CSV.exists(), TRAIN_CSV)
 print("TEST_CSV:", TEST_CSV.exists(), TEST_CSV)
 
+# %%
 pd.set_option("mode.dtype_backend", "pyarrow")
-
-# --- load both files ---
 train = pd.read_csv(TRAIN_CSV, engine="pyarrow")
 test = pd.read_csv(TEST_CSV, engine="pyarrow")
-
 # --- shape checks (canonical Titanic sizes) ---
+# %%
 print(f"train shape: {train.shape}  (expected (891, 12))")
 print(f"test  shape: {test.shape}   (expected (418, 11))\n")
 
 # Quick peek to verify we're looking at Titanic data
+# %%
 print("train.head():")
 print(train.head(), "\n")
 
 # --- schema checks: exact columns & order ---
+# %%
 expected_train = [
     "PassengerId",
     "Survived",
@@ -61,6 +58,7 @@ expected_test = [
 ]
 
 
+# %%
 def assert_same_columns(df, expected, name):
     got = list(df.columns)
     if got != expected:
@@ -72,10 +70,11 @@ def assert_same_columns(df, expected, name):
         )
 
 
+# %%
 assert_same_columns(train, expected_train, "train")
 assert_same_columns(test, expected_test, "test")
 assert "Survived" not in test.columns, "Leakage: test set must not contain 'Survived'"
-
+# %%
 print("Column checks passed.")
 
 # %%
