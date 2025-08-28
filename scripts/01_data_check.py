@@ -19,17 +19,12 @@ print("TEST_CSV:", TEST_CSV.exists(), TEST_CSV)
 # pd.set_option("mode.dtype_backend", "pyarrow")  cannot use atm, buggy asf. Trouble shooting exhausted and failed.
 train = pd.read_csv(TRAIN_CSV)
 test = pd.read_csv(TEST_CSV)
-# --- shape checks (canonical Titanic sizes) ---
 # %% shape checks
 print(f"train shape: {train.shape}  (expected (891, 12))")
 print(f"test  shape: {test.shape}   (expected (418, 11))\n")
-
-# Quick peek to verify we're looking at Titanic data
 # %% head check
 print("train.head():")
 print(train.head(), "\n")
-
-# --- schema checks: exact columns & order ---
 # %% schema check, expected
 expected_train = [
     "PassengerId",
