@@ -1,6 +1,6 @@
 # %% import statements
 from __future__ import annotations
-from pathlib import Path
+
 from titanic_lab.paths import (
     TRAIN_CSV,
     TEST_CSV,
