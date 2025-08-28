@@ -1,34 +1,36 @@
+# %% import statements
 from __future__ import annotations
-
-# %%
+from pathlib import Path
 from titanic_lab.paths import (
     TRAIN_CSV,
     TEST_CSV,
 )  # and whatever common files that were defined in the src/paths.py
 import pandas as pd
 
+# %%   verifying pandas version before running entire script
+print(pd.__version__)
 
-# Check that the data files exist
-# %%
+
+# %% file existence checks
 print("TRAIN_CSV:", TRAIN_CSV.exists(), TRAIN_CSV)
 print("TEST_CSV:", TEST_CSV.exists(), TEST_CSV)
 
-# %%
-pd.set_option("mode.dtype_backend", "pyarrow")
-train = pd.read_csv(TRAIN_CSV, engine="pyarrow")
-test = pd.read_csv(TEST_CSV, engine="pyarrow")
+# %% read CSV files
+# pd.set_option("mode.dtype_backend", "pyarrow")  cannot use atm, buggy asf. Trouble shooting exhausted and failed.
+train = pd.read_csv(TRAIN_CSV)
+test = pd.read_csv(TEST_CSV)
 # --- shape checks (canonical Titanic sizes) ---
-# %%
+# %% shape checks
 print(f"train shape: {train.shape}  (expected (891, 12))")
 print(f"test  shape: {test.shape}   (expected (418, 11))\n")
 
 # Quick peek to verify we're looking at Titanic data
-# %%
+# %% head check
 print("train.head():")
 print(train.head(), "\n")
 
 # --- schema checks: exact columns & order ---
-# %%
+# %% schema check, expected
 expected_train = [
     "PassengerId",
     "Survived",
@@ -58,7 +60,7 @@ expected_test = [
 ]
 
 
-# %%
+# %% column check function
 def assert_same_columns(df, expected, name):
     got = list(df.columns)
     if got != expected:
@@ -70,11 +72,9 @@ def assert_same_columns(df, expected, name):
         )
 
 
-# %%
+# %% run column checks
 assert_same_columns(train, expected_train, "train")
 assert_same_columns(test, expected_test, "test")
 assert "Survived" not in test.columns, "Leakage: test set must not contain 'Survived'"
-# %%
+# %%    final checks print if all passed
 print("Column checks passed.")
-
-# %%
