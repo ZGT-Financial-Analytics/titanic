@@ -15,16 +15,20 @@ print(pd.__version__)
 print("TRAIN_CSV:", TRAIN_CSV.exists(), TRAIN_CSV)
 print("TEST_CSV:", TEST_CSV.exists(), TEST_CSV)
 
-# %% read CSV files
+# %% read CSV files into memory
 # pd.set_option("mode.dtype_backend", "pyarrow")  cannot use atm, buggy asf. Trouble shooting exhausted and failed.
 train = pd.read_csv(TRAIN_CSV)
 test = pd.read_csv(TEST_CSV)
-# %% shape checks
+# %% shape checks on train and test batches
 print(f"train shape: {train.shape}  (expected (891, 12))")
 print(f"test  shape: {test.shape}   (expected (418, 11))\n")
-# %% head check
+# %% head(5 sample) check on train DataFrame
 print("train.head():")
 print(train.head(), "\n")
+
+# %% head(5 sample) check test DataFrame
+print("test.head():")
+print(test.head())
 # %% schema check, expected
 expected_train = [
     "PassengerId",
@@ -73,3 +77,5 @@ assert_same_columns(test, expected_test, "test")
 assert "Survived" not in test.columns, "Leakage: test set must not contain 'Survived'"
 # %%    final checks print if all passed
 print("Column checks passed.")
+
+# %%
