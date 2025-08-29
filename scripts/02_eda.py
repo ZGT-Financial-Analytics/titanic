@@ -1,45 +1,70 @@
+"""
+Exploratory Data Analysis (EDA) script for the Titanic dataset.
+This script performs the following steps:
+1. Imports necessary modules and project paths.
+2. Loads the Titanic training dataset.
+3. Displays dataset shape and info.
+4. Generates summary statistics for numeric and categorical features.
+5. Checks for missing values in each column.
+6. Counts non-missing values in the "Age" column.
+7. Analyzes survival rates by various categories:
+  - Sex
+  - Passenger class (Pclass)
+  - Embarkation port (Embarked)
+  - Cross-tabulation of Sex and Pclass
+8. Visualizes distributions of continuous features:
+  - Age (histogram)
+  - Fare (histogram, linear and log scale)
+  - Boxplots of Age and Fare by survival status
+9. Engineers and inspects categorical features:
+  - Presence of Cabin information (HasCabin)
+  - Family size (FamilySize) and binned family size (FamilyBin)
+10. Saves key summary tables (pivot table of survival by Sex and Pclass, missingness per column) to the outputs directory.
+Functions:
+  plot_rate(series: pd.Series, title: str) -> None
+    Plots a bar chart of survival rates for a given categorical grouping.
+Outputs:
+  - CSV files for pivot table and missingness statistics in the outputs/eda directory.
+  - Multiple plots visualizing survival rates and feature distributions.
+"""
+
+# %% import statements
 from __future__ import annotations
-from pathlib import Path
-from titanic.paths import (
+from titanic_lab.paths import (
     ROOT,
-    RAW,
     TRAIN_CSV,
-    TEST_CSV,
 )  # and whatever common files that were defined in the src/paths.py
-import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Make `src/` importable without packaging (editable install is nicer, but this is lean)
-sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
-from titanic.paths import ROOT, TRAIN_CSV  # noqa: E402
+# %% LOAD DATA
+df = pd.read_csv(TRAIN_CSV)
 
-# ---------- options ----------
-# Arrow-backed dtypes: consistent nullable ints/strings + fast IO
-pd.set_option("mode.dtype_backend", "pyarrow")
-
-# ---------- load ----------
-df = pd.read_csv(TRAIN_CSV, engine="pyarrow")
-
+# %% SHAPE CHECK
 print("Shape:", df.shape)  # expect (891, 12)
 print("\nInfo():")
-print(df.info())
+df.info()
 
-# ---------- 3.1 Summary statistics ----------
-# Numeric
-num_desc = df.describe(numeric_only=True)
+# %% generating summary statistics on dataset
+num_desc = df.describe()
+print(num_desc)
 
-# Categorical / strings / booleans (Arrow- or pandas-backed)
-cat_desc = df.describe(include=["string", "category", "boolean"])
+# %% generating summary stats on Categorical / strings / booleans
+cat_desc = df.describe(include=["object", "category", "boolean"])
+print(cat_desc)
 
-
-# Missingness overview
+# %% Checking missing values
 na = df.isna().sum().sort_values(ascending=False)
 print("\nMissing values per column:")
 print(na)
 
-# Quick checks that match the competition description
+
+# Using the df["Age"] column with the .notna() method chained to the sum method takes all of the values
+# This counts the number of non-missing values in the "Age" column.
+# .notna() returns a boolean Series (True for present values), and .sum() counts the Trues.
+
+# %%
 n_non_missing_age = df["Age"].notna().sum()
 print(f"\nNon-missing Age count: {n_non_missing_age} (expect 714)")
 
@@ -140,3 +165,5 @@ OUT.mkdir(parents=True, exist_ok=True)
 pivot_sex_pclass.to_csv(OUT / "pivot_sex_pclass.csv", index=True)
 na.to_csv(OUT / "missingness.csv", header=["n_missing"])
 print(f"\nSaved pivot and missingness tables to {OUT}")
+
+# %%
