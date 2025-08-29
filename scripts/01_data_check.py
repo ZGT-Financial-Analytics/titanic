@@ -77,5 +77,3 @@ assert_same_columns(test, expected_test, "test")
 assert "Survived" not in test.columns, "Leakage: test set must not contain 'Survived'"
 # %%    final checks print if all passed
 print("Column checks passed.")
-
-# %%
