@@ -118,6 +118,7 @@ ax.set_title("Age distribution (train)")
 ax.set_xlabel("Age")
 plt.tight_layout()
 plt.show()
+
 # %% Fare distribution
 # Fare is skewed; look at both linear and log scales
 ax = df["Fare"].dropna().plot(kind="hist", bins=40)
@@ -131,6 +132,7 @@ ax.set_title("Fare distribution (log scale)")
 ax.set_xlabel("Fare")
 plt.tight_layout()
 plt.show()
+
 # %% Boxplots by survival
 # Boxplots to compare distributions by survival
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
