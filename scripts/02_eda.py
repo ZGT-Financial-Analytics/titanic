@@ -159,17 +159,112 @@ ax.set_xlabel("Survived")
 ax.set_ylabel("Age")
 plt.tight_layout()
 plt.show()
+# %% Boxplot numerical sanity check
+
+
+out = (
+    df[["Survived", "Fare"]]
+    .dropna()
+    .groupby("Survived")["Fare"]
+    .agg(
+        median="median",
+        mean="mean",
+        q1=lambda s: s.quantile(0.25),
+        q2=lambda s: s.quantile(0.50),
+        q3=lambda s: s.quantile(0.75),
+        n="size",
+    )
+)
+print("Summary statistics for Fare by Survived:")
+print()
+print(out)
 # %% Boxplot for Fare
-df.boxplot(column="Fare", by="Survived", ax=axes[1])
-axes[1].set_title("Fare by Survived")
-axes[1].set_xlabel("Survived")
-axes[1].set_ylabel("Fare")
+fig, ax = plt.subplots(figsize=(6, 4))
+df.boxplot(column="Fare", by="Survived", ax=ax)
+ax.set_title("Fare by Survived")
+ax.set_xlabel("Survived")
+ax.set_ylabel("Fare")
 fig.suptitle("")  # remove automatic suptitle
 plt.tight_layout()
 plt.show()
 
+
+# %% % outliars
+
+
+def outlier_stats(df, value_col="Fare", group_col="Survived"):
+    rows = []
+    for g, s in df[[group_col, value_col]].dropna().groupby(group_col)[value_col]:
+        s = s.astype(float)
+        q1, q3 = s.quantile([0.25, 0.75])
+        iqr = q3 - q1
+        low_fence = q1 - 1.5 * iqr
+        high_fence = q3 + 1.5 * iqr
+
+        n = len(s)
+        n_low = int((s < low_fence).sum())
+        n_high = int((s > high_fence).sum())
+        n_out = n_low + n_high
+
+        rows.append(
+            {
+                group_col: g,
+                "n": n,
+                "q1": q1,
+                "median": s.median(),
+                "q3": q3,
+                "iqr": iqr,
+                "low_fence": low_fence,
+                "high_fence": high_fence,
+                # counts
+                "n_outliers_low": n_low,
+                "n_outliers_high": n_high,
+                "n_outliers_total": n_out,
+                # percentages
+                "pct_in_box": s.between(q1, q3).mean(),  # ~0.50 by definition
+                "pct_outliers_low": n_low / n,
+                "pct_outliers_high": n_high / n,
+                "pct_outliers_total": n_out / n,
+                # optional: make counts comparable per-100 passengers
+                "outliers_high_per_100": 100 * n_high / n,
+            }
+        )
+    cols_order = [
+        group_col,
+        "n",
+        "q1",
+        "median",
+        "q3",
+        "iqr",
+        "low_fence",
+        "high_fence",
+        "n_outliers_low",
+        "n_outliers_high",
+        "n_outliers_total",
+        "pct_in_box",
+        "pct_outliers_low",
+        "pct_outliers_high",
+        "pct_outliers_total",
+        "outliers_high_per_100",
+    ]
+    return pd.DataFrame(rows)[cols_order]
+
+
+out = outlier_stats(df, "Fare", "Survived")
+print(
+    out.assign(
+        pct_in_box=lambda d: d.pct_in_box.round(3),
+        pct_outliers_low=lambda d: d.pct_outliers_low.round(3),
+        pct_outliers_high=lambda d: d.pct_outliers_high.round(3),
+        pct_outliers_total=lambda d: d.pct_outliers_total.round(3),
+        outliers_high_per_100=lambda d: d.outliers_high_per_100.round(1),
+    ).round(2)
+)
+
+
 # ---------- 3.4 Handy categorical transforms ----------
 # Example: small engineered flags that are useful to inspect
+
 # %% Cabin presence
 df["HasCabin"] = df["Cabin"].notna()
 plot_rate(df.groupby("HasCabin")["Survived"].mean(), "Survival by Cabin presence")
