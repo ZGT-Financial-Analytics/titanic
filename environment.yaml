@@ -6,7 +6,6 @@ dependencies:
   - pandas=2.3.*
   - pyarrow=17.*
   - arrow-cpp=17.*
-  - vs2015_runtime
   - numpy
   - scikit-learn
   - jupyterlab
