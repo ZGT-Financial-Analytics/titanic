@@ -132,7 +132,22 @@ ax.set_xlabel("Fare")
 plt.tight_layout()
 plt.show()
 # %% Boxplots by survival
-# Boxplots to compare distributions by survival
+
+# quick sanity check on what boxplot should look like
+out = (
+    df[["Survived", "Age"]]
+    .dropna()
+    .groupby("Survived")["Age"]
+    .agg(
+        median="median",
+        mean="mean",
+        q1=lambda s: s.quantile(0.25),
+        q3=lambda s: s.quantile(0.75),
+        n="size",
+    )
+)
+print(out)
+
 fig, ax = plt.subplots(figsize=(6, 4))
 df.boxplot(column="Age", by="Survived", ax=ax)
 
