@@ -133,11 +133,17 @@ plt.tight_layout()
 plt.show()
 # %% Boxplots by survival
 # Boxplots to compare distributions by survival
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-df.boxplot(column="Age", by="Survived", ax=axes[0])
-axes[0].set_title("Age by Survived")
-axes[0].set_xlabel("Survived")
-axes[0].set_ylabel("Age")
+fig, ax = plt.subplots(figsize=(6, 4))
+df.boxplot(column="Age", by="Survived", ax=ax)
+
+# Pandas adds a figure-level suptitle when you use `by=`—delete it:
+fig.suptitle("")
+
+ax.set_title("Age by Survived")
+ax.set_xlabel("Survived")
+ax.set_ylabel("Age")
+plt.tight_layout()
+plt.show()
 # %% Boxplot for Fare
 df.boxplot(column="Fare", by="Survived", ax=axes[1])
 axes[1].set_title("Fare by Survived")
