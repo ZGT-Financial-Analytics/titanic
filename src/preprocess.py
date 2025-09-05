@@ -29,10 +29,7 @@ def build_basic_preprocessor() -> ColumnTransformer:
     num_pipe = Pipeline(
         steps=[
             ("impute", SimpleImputer(strategy="median")),
-            (
-                "scale",
-                StandardScaler(with_mean=False),
-            ),  # sparse-friendly when combined with OHE
+            ("scale", StandardScaler(with_mean=False)),
         ]
     )
 
@@ -92,3 +89,5 @@ if __name__ == "__main__":
     # Quick sanity: transformed shape
     Xt = transform_any(df_train, pipe)
     print("Transformed train shape:", Xt.shape)
+
+# %%
