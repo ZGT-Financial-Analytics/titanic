@@ -31,7 +31,7 @@ NUMERIC_COLS = ["Age", "Fare", "SibSp", "Parch"]
 CAT_COLS = ["Sex", "Embarked", "Pclass"]
 
 
-# data loading function, with type conversions for categorical columns
+# TRAIN data loading function, with type conversions for categorical columns TRAIN
 def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     df = pd.read_csv(path)
     df["Pclass"] = df["Pclass"].astype("category")
@@ -40,6 +40,7 @@ def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     return df
 
 
+# TEST data loading function, with type conversions for categorical columns TEST
 def load_test(path: Path | str = TEST_CSV) -> pd.DataFrame:
     df = pd.read_csv(path)
     df["Pclass"] = df["Pclass"].astype("category")
