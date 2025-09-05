@@ -1,4 +1,4 @@
-# %% imports
+# imports
 from __future__ import annotations
 from pathlib import Path
 import joblib
@@ -10,13 +10,16 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
 from titanic_lab.paths import ROOT, TRAIN_CSV
 
+# storage for outputs
 OUT_MODELS = Path(ROOT) / "outputs" / "models"
 OUT_MODELS.mkdir(parents=True, exist_ok=True)
 
+# establishing numerical and categorical columns to route through respective pipelines in ColumnTransformer
 NUMERIC_COLS = ["Age", "Fare", "SibSp", "Parch"]
 CAT_COLS = ["Sex", "Embarked", "Pclass"]
 
 
+# data loading & dtype hygiene
 def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     df = pd.read_csv(path)
     df["Pclass"] = df["Pclass"].astype("category")
@@ -25,6 +28,7 @@ def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     return df
 
 
+# building preprocessing pipeline, num+cat pipelines -> ColumnTransformer
 def build_preprocessor() -> ColumnTransformer:
     num_pipe = Pipeline(
         steps=[
@@ -51,7 +55,8 @@ def build_preprocessor() -> ColumnTransformer:
     return pre
 
 
-def split_X_y(df: pd.DataFrame):
+# establish feature matrix and targets for training (will take df_train as df)
+def split_X_y(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     y = df["Survived"].astype(int)
     X = df.drop(columns=["Survived", "PassengerId"])  # keep PassengerId out of features
     return X, y
@@ -89,5 +94,3 @@ if __name__ == "__main__":
     # Quick sanity: transformed shape
     Xt = transform_any(df_train, pipe)
     print("Transformed train shape:", Xt.shape)
-
-# %%
