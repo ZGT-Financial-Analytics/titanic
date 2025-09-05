@@ -25,11 +25,11 @@ def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     return df
 
 
-def build_basic_preprocessor() -> ColumnTransformer:
+def build_preprocessor() -> ColumnTransformer:
     num_pipe = Pipeline(
         steps=[
             ("impute", SimpleImputer(strategy="median")),
-            ("scale", StandardScaler(with_mean=False)),
+            ("scale", StandardScaler(with_mean=True)),
         ]
     )
 
@@ -58,7 +58,7 @@ def split_X_y(df: pd.DataFrame):
 
 
 def fit_preprocessor_on_train(df_train: pd.DataFrame) -> Pipeline:
-    pre = build_basic_preprocessor()
+    pre = build_preprocessor()
     # Wrap in Pipeline so later you can just append a classifier
     pipe = Pipeline(steps=[("pre", pre)])
     X, _ = split_X_y(df_train)
