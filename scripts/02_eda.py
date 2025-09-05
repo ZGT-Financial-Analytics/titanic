@@ -36,7 +36,7 @@ from titanic_lab.paths import (
 )  # and whatever common files that were defined in the src/paths.py
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 # %% LOAD DATA
 df = pd.read_csv(TRAIN_CSV)
@@ -64,12 +64,14 @@ print(na)
 # This counts the number of non-missing values in the "Age" column.
 # .notna() returns a boolean Series (True for present values), and .sum() counts the Trues.
 
-# %%
+# %% Non-missing Age count
 n_non_missing_age = df["Age"].notna().sum()
 print(f"\nNon-missing Age count: {n_non_missing_age} (expect 714)")
 
 
-# %% survival rate by category
+# %% barplot helper
+
+
 def plot_rate(series: pd.Series, title: str) -> None:
     ax = series.sort_values(ascending=False).plot(kind="bar")
     ax.set_ylim(0, 1)
@@ -78,6 +80,10 @@ def plot_rate(series: pd.Series, title: str) -> None:
     plt.tight_layout()
     plt.show()
 
+
+# %% Cabin presence
+df["HasCabin"] = df["Cabin"].notna()
+plot_rate(df.groupby("HasCabin")["Survived"].mean(), "Survival by Cabin presence")
 
 # %%  binary target sanity check
 print("\nSurvived value counts (0/1):")
@@ -188,8 +194,34 @@ fig.suptitle("")  # remove automatic suptitle
 plt.tight_layout()
 plt.show()
 
+# %% $$Fare LOG SCALE
+fig, ax = plt.subplots(figsize=(6, 4))
+df.boxplot(column="Fare", by="Survived", ax=ax)
+ax.set_yscale("log")  # <- log axis
+ax.set_title("Fare by Survived (log scale)")
+ax.set_xlabel("Survived")
+ax.set_ylabel("Fare (log scale)")
+fig.suptitle("")
+plt.tight_layout()
+plt.show()
 
-# %% % outliars
+
+# %% LOG1P SCALE (ALLOWS 0'S IN DISTRIBUTION)
+
+df2 = df.copy()
+df2["Fare_log1p"] = np.log1p(df2["Fare"].clip(lower=0))  # guard against tiny negatives
+
+fig, ax = plt.subplots(figsize=(6, 4))
+df2.boxplot(column="Fare_log1p", by="Survived", ax=ax)
+ax.set_title("log1p(Fare) by Survived")
+ax.set_xlabel("Survived")
+ax.set_ylabel("log1p(Fare)")
+fig.suptitle("")
+plt.tight_layout()
+plt.show()
+
+# %% boxplot for Fare w/ log scle
+# %% % outliars for fare boxplot
 
 
 def outlier_stats(df, value_col="Fare", group_col="Survived"):
@@ -262,13 +294,6 @@ print(
 )
 
 
-# ---------- 3.4 Handy categorical transforms ----------
-# Example: small engineered flags that are useful to inspect
-
-# %% Cabin presence
-df["HasCabin"] = df["Cabin"].notna()
-plot_rate(df.groupby("HasCabin")["Survived"].mean(), "Survival by Cabin presence")
-
 # %% Family size (SibSp + Parch + self) binned
 df["FamilySize"] = df["SibSp"] + df["Parch"] + 1
 df["FamilyBin"] = pd.cut(
@@ -282,5 +307,3 @@ OUT.mkdir(parents=True, exist_ok=True)
 pivot_sex_pclass.to_csv(OUT / "pivot_sex_pclass.csv", index=True)
 na.to_csv(OUT / "missingness.csv", header=["n_missing"])
 print(f"\nSaved pivot and missingness tables to {OUT}")
-
-# %%
