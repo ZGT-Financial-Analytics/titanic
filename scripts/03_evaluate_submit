@@ -79,7 +79,7 @@ def evaluate_holdout(seed: int = 42) -> dict:
 
 
 def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
-    """Robust evaluation: stratified K-fold cross-validation with accuracy (Kaggle metric) + ROC-AUC."""
+    """Stratified K-fold CV with accuracy (Kaggle metric) + ROC-AUC + precision/recall/F1."""
     df = load_train()
     y = df["Survived"].astype(int)
     X = df.drop(columns=["Survived"])
@@ -103,11 +103,18 @@ def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
         n_jobs=-1,
     )
 
+    # Fold-wise -> summary stats
     acc_mean, acc_std = float(res["test_acc"].mean()), float(res["test_acc"].std())
     roc_mean, roc_std = float(res["test_roc"].mean()), float(res["test_roc"].std())
+    prec_mean, prec_std = float(res["test_prec"].mean()), float(res["test_prec"].std())
+    rec_mean, rec_std = float(res["test_rec"].mean()), float(res["test_rec"].std())
+    f1_mean, f1_std = float(res["test_f1"].mean()), float(res["test_f1"].std())
 
-    print(f"[{n_splits}-FOLD CV] accuracy = {acc_mean:.3f} ± {acc_std:.3f}")
-    print(f"[{n_splits}-FOLD CV] ROC-AUC  = {roc_mean:.3f} ± {roc_std:.3f}")
+    print(f"[{n_splits}-FOLD CV] accuracy     = {acc_mean:.3f} ± {acc_std:.3f}")
+    print(f"[{n_splits}-FOLD CV] ROC-AUC      = {roc_mean:.3f} ± {roc_std:.3f}")
+    print(f"[{n_splits}-FOLD CV] precision(1) = {prec_mean:.3f} ± {prec_std:.3f}")
+    print(f"[{n_splits}-FOLD CV] recall(1)    = {rec_mean:.3f} ± {rec_std:.3f}")
+    print(f"[{n_splits}-FOLD CV] F1(1)        = {f1_mean:.3f} ± {f1_std:.3f}")
 
     return {
         "mode": "cv",
@@ -116,8 +123,17 @@ def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
         "acc_std": acc_std,
         "roc_mean": roc_mean,
         "roc_std": roc_std,
+        "prec_mean": prec_mean,
+        "prec_std": prec_std,
+        "rec_mean": rec_mean,
+        "rec_std": rec_std,
+        "f1_mean": f1_mean,
+        "f1_std": f1_std,
         "fold_acc": [float(x) for x in res["test_acc"]],
         "fold_roc": [float(x) for x in res["test_roc"]],
+        "fold_prec": [float(x) for x in res["test_prec"]],
+        "fold_rec": [float(x) for x in res["test_rec"]],
+        "fold_f1": [float(x) for x in res["test_f1"]],
         "seed": seed,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
