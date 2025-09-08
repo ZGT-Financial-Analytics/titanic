@@ -5,27 +5,20 @@ import argparse
 import json
 import time
 from pathlib import Path
-
-import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
     roc_auc_score,
     classification_report,
     confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score,
 )
 from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate
-
-# ---------------------------------------------------------------------
-# ⬇️ Change this import to match where your script lives.
-# If you saved your script as titanic_lab/modeling.py:
-#   from titanic_lab.modeling import load_train, load_test, build_model, OUT_SUB
-# If it’s a single file named model_build.py at project root:
-#   from model_build import load_train, load_test, build_model, OUT_SUB
 from titanic_lab.model_titanic import load_train, load_test, build_model, OUT_SUB
 
-# ---------------------------------------------------------------------
-
+# storage for metrics
 OUT_METRICS = Path("outputs/metrics")
 OUT_METRICS.mkdir(parents=True, exist_ok=True)
 
@@ -55,16 +48,31 @@ def evaluate_holdout(seed: int = 42) -> dict:
     acc = float(accuracy_score(y_val, y_pred))
     auc = float(roc_auc_score(y_val, y_proba)) if y_proba is not None else float("nan")
 
-    print(f"[HOLDOUT] accuracy = {acc:.3f} | ROC-AUC = {auc:.3f}")
-    print("\nClassification report:")
-    print(classification_report(y_val, y_pred))
-    print("\nConfusion matrix (rows=true, cols=pred):")
-    print(confusion_matrix(y_val, y_pred))
+    prec = float(precision_score(y_val, y_pred, pos_label=1))
+    rec = float(recall_score(y_val, y_pred, pos_label=1))
+    f1_ = float(f1_score(y_val, y_pred, pos_label=1))
+
+    cr_text = classification_report(y_val, y_pred, digits=3)
+    cm = confusion_matrix(y_val, y_pred)
+
+    print(
+        f"[HOLDOUT] accuracy = {acc:.3f} | ROC-AUC = {auc:.3f} | "
+        f"precision(1) = {prec:.3f} | recall(1) = {rec:.3f} | F1(1) = {f1_:.3f}"
+    )
+    print("\nClassification report:\n", cr_text)
+    print("\nConfusion matrix (rows=true, cols=pred):\n", cm)
 
     return {
         "mode": "holdout",
         "acc": acc,
         "auc": auc,
+        "precision_pos": prec,
+        "recall_pos": rec,
+        "f1_pos": f1_,
+        # make them JSON-friendly if you want them in the metrics file:
+        "confusion_matrix": cm.tolist(),
+        # optional: structured report for later analysis
+        "classification_report": classification_report(y_val, y_pred, output_dict=True),
         "seed": seed,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
@@ -84,7 +92,13 @@ def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
         X,
         y,
         cv=cv,
-        scoring={"acc": "accuracy", "roc": "roc_auc"},
+        scoring={
+            "acc": "accuracy",
+            "roc": "roc_auc",
+            "prec": "precision",
+            "rec": "recall",
+            "f1": "f1",
+        },
         return_train_score=False,
         n_jobs=-1,
     )
