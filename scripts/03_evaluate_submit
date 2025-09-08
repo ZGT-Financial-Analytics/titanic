@@ -1,0 +1,178 @@
+# evaluate_and_submit.py
+from __future__ import annotations
+
+import argparse
+import json
+import time
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import (
+    accuracy_score,
+    roc_auc_score,
+    classification_report,
+    confusion_matrix,
+)
+from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate
+
+# ---------------------------------------------------------------------
+# ⬇️ Change this import to match where your script lives.
+# If you saved your script as titanic_lab/modeling.py:
+#   from titanic_lab.modeling import load_train, load_test, build_model, OUT_SUB
+# If it’s a single file named model_build.py at project root:
+#   from model_build import load_train, load_test, build_model, OUT_SUB
+from titanic_lab.model_titanic import load_train, load_test, build_model, OUT_SUB
+
+# ---------------------------------------------------------------------
+
+OUT_METRICS = Path("outputs/metrics")
+OUT_METRICS.mkdir(parents=True, exist_ok=True)
+
+
+def evaluate_holdout(seed: int = 42) -> dict:
+    """Quick sanity-check: single stratified holdout with rich diagnostics."""
+    df = load_train()
+    y = df["Survived"].astype(int)
+    X = df.drop(columns=["Survived"])
+
+    X_tr, X_val, y_tr, y_val = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        stratify=y,
+        random_state=seed,
+        # Stratify ensures class balance in both splits
+    )
+
+    pipe = build_model()
+    pipe.fit(X_tr, y_tr)
+
+    y_pred = pipe.predict(X_val)
+    proba_ok = hasattr(pipe, "predict_proba")
+    y_proba = pipe.predict_proba(X_val)[:, 1] if proba_ok else None
+
+    acc = float(accuracy_score(y_val, y_pred))
+    auc = float(roc_auc_score(y_val, y_proba)) if y_proba is not None else float("nan")
+
+    print(f"[HOLDOUT] accuracy = {acc:.3f} | ROC-AUC = {auc:.3f}")
+    print("\nClassification report:")
+    print(classification_report(y_val, y_pred))
+    print("\nConfusion matrix (rows=true, cols=pred):")
+    print(confusion_matrix(y_val, y_pred))
+
+    return {
+        "mode": "holdout",
+        "acc": acc,
+        "auc": auc,
+        "seed": seed,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
+    """Robust evaluation: stratified K-fold cross-validation with accuracy (Kaggle metric) + ROC-AUC."""
+    df = load_train()
+    y = df["Survived"].astype(int)
+    X = df.drop(columns=["Survived"])
+
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    pipe = build_model()
+
+    res = cross_validate(
+        pipe,
+        X,
+        y,
+        cv=cv,
+        scoring={"acc": "accuracy", "roc": "roc_auc"},
+        return_train_score=False,
+        n_jobs=-1,
+    )
+
+    acc_mean, acc_std = float(res["test_acc"].mean()), float(res["test_acc"].std())
+    roc_mean, roc_std = float(res["test_roc"].mean()), float(res["test_roc"].std())
+
+    print(f"[{n_splits}-FOLD CV] accuracy = {acc_mean:.3f} ± {acc_std:.3f}")
+    print(f"[{n_splits}-FOLD CV] ROC-AUC  = {roc_mean:.3f} ± {roc_std:.3f}")
+
+    return {
+        "mode": "cv",
+        "n_splits": n_splits,
+        "acc_mean": acc_mean,
+        "acc_std": acc_std,
+        "roc_mean": roc_mean,
+        "roc_std": roc_std,
+        "fold_acc": [float(x) for x in res["test_acc"]],
+        "fold_roc": [float(x) for x in res["test_roc"]],
+        "seed": seed,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+def persist_metrics(metrics: dict, tag: str) -> Path:
+    out = OUT_METRICS / f"{metrics['mode']}_{tag}_{int(time.time())}.json"
+    with open(out, "w") as f:
+        json.dump(metrics, f, indent=2)
+    print(f"Saved metrics -> {out}")
+    return out
+
+
+def refit_full_and_submit(tag: str) -> Path:
+    """Optional: fit on all training data and write a timestamped submission."""
+    df_train = load_train()
+    y = df_train["Survived"].astype(int)
+    X = df_train.drop(columns=["Survived"])
+
+    pipe = build_model()
+    pipe.fit(X, y)
+
+    df_test = load_test()
+    y_pred = pipe.predict(df_test).astype(int)
+
+    OUT_SUB.mkdir(parents=True, exist_ok=True)
+    ts = time.strftime("%Y%m%d_%H%M%S")
+    sub_path = OUT_SUB / f"submission_{tag}_{ts}.csv"
+    pd.DataFrame({"PassengerId": df_test["PassengerId"], "Survived": y_pred}).to_csv(
+        sub_path, index=False
+    )
+    print(f"Wrote submission -> {sub_path}")
+    return sub_path
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Evaluate Titanic model (holdout or CV) and optionally write a submission."
+    )
+    ap.add_argument(
+        "--mode", choices=["cv", "holdout"], default="cv", help="Evaluation mode."
+    )
+    ap.add_argument(
+        "--cv", type=int, default=5, help="Number of CV folds (if mode=cv)."
+    )
+    ap.add_argument("--seed", type=int, default=42, help="Random seed for splits.")
+    ap.add_argument(
+        "--tag",
+        type=str,
+        default="logreg_baseline",
+        help="Short label saved into filenames.",
+    )
+    ap.add_argument(
+        "--submit",
+        action="store_true",
+        help="After eval, refit on full train and write a submission.",
+    )
+    args = ap.parse_args()
+
+    if args.mode == "cv":
+        metrics = evaluate_cv(n_splits=args.cv, seed=args.seed)
+    else:
+        metrics = evaluate_holdout(seed=args.seed)
+
+    persist_metrics(metrics, tag=args.tag)
+
+    if args.submit:
+        refit_full_and_submit(tag=args.tag)
+
+
+if __name__ == "__main__":
+    main()
