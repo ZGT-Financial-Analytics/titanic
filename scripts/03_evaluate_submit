@@ -1,6 +1,6 @@
 # evaluate_and_submit.py
 from __future__ import annotations
-
+import numpy as np  # noqa: F401
 import argparse
 import json
 import time
@@ -35,7 +35,6 @@ def evaluate_holdout(seed: int = 42) -> dict:
         test_size=0.2,
         stratify=y,
         random_state=seed,
-        # Stratify ensures class balance in both splits
     )
 
     pipe = build_model()
