@@ -77,7 +77,7 @@ def evaluate_holdout(seed: int = 42) -> dict:
     }
 
 
-def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
+def evaluate_cv(n_splits: int = 5, seed: int = 42, verbose: bool = False) -> dict:
     """Stratified K-fold CV with accuracy (Kaggle metric) + ROC-AUC + precision/recall/F1."""
     df = load_train()
     y = df["Survived"].astype(int)
@@ -102,22 +102,17 @@ def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
         n_jobs=-1,
     )
 
-    # Fold-wise -> summary stats
+    # summary stats (ensure built-in floats for JSON)
     acc_mean, acc_std = float(res["test_acc"].mean()), float(res["test_acc"].std())
     roc_mean, roc_std = float(res["test_roc"].mean()), float(res["test_roc"].std())
     prec_mean, prec_std = float(res["test_prec"].mean()), float(res["test_prec"].std())
     rec_mean, rec_std = float(res["test_rec"].mean()), float(res["test_rec"].std())
     f1_mean, f1_std = float(res["test_f1"].mean()), float(res["test_f1"].std())
 
-    print(f"[{n_splits}-FOLD CV] accuracy     = {acc_mean:.3f} ± {acc_std:.3f}")
-    print(f"[{n_splits}-FOLD CV] ROC-AUC      = {roc_mean:.3f} ± {roc_std:.3f}")
-    print(f"[{n_splits}-FOLD CV] precision(1) = {prec_mean:.3f} ± {prec_std:.3f}")
-    print(f"[{n_splits}-FOLD CV] recall(1)    = {rec_mean:.3f} ± {rec_std:.3f}")
-    print(f"[{n_splits}-FOLD CV] F1(1)        = {f1_mean:.3f} ± {f1_std:.3f}")
-
-    return {
+    metrics = {
+        "schema_version": 1,
         "mode": "cv",
-        "n_splits": n_splits,
+        "n_splits": int(n_splits),
         "acc_mean": acc_mean,
         "acc_std": acc_std,
         "roc_mean": roc_mean,
@@ -133,9 +128,23 @@ def evaluate_cv(n_splits: int = 5, seed: int = 42) -> dict:
         "fold_prec": [float(x) for x in res["test_prec"]],
         "fold_rec": [float(x) for x in res["test_rec"]],
         "fold_f1": [float(x) for x in res["test_f1"]],
-        "seed": seed,
+        "seed": int(seed),
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
+
+    if verbose:
+        _print_cv_summary(metrics)
+
+    return metrics
+
+
+def _print_cv_summary(m: dict) -> None:
+    n = m["n_splits"]
+    print(f"[{n}-FOLD CV] accuracy     = {m['acc_mean']:.3f} ± {m['acc_std']:.3f}")
+    print(f"[{n}-FOLD CV] ROC-AUC      = {m['roc_mean']:.3f} ± {m['roc_std']:.3f}")
+    print(f"[{n}-FOLD CV] precision(1) = {m['prec_mean']:.3f} ± {m['prec_std']:.3f}")
+    print(f"[{n}-FOLD CV] recall(1)    = {m['rec_mean']:.3f} ± {m['rec_std']:.3f}")
+    print(f"[{n}-FOLD CV] F1(1)        = {m['f1_mean']:.3f} ± {m['f1_std']:.3f}")
 
 
 def persist_metrics(metrics: dict, tag: str) -> Path:
