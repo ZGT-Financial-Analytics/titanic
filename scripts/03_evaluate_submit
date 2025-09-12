@@ -1,11 +1,14 @@
-# evaluate_and_submit.py
+# --- Ensure PYTHONPATH includes src so titanic_lab imports work ---
 from __future__ import annotations
+import sys
+from pathlib import Path
+
 import numpy as np  # noqa: F401
 import argparse
 import json
-import time
-from pathlib import Path
 import pandas as pd
+import time
+from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate
 from sklearn.metrics import (
     accuracy_score,
     roc_auc_score,
@@ -15,8 +18,11 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
 )
-from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate
 from titanic_lab.model_titanic import load_train, load_test, build_model, OUT_SUB
+
+SRC_PATH = Path(__file__).resolve().parent.parent / "src"
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
 
 # storage for metrics
 OUT_METRICS = Path("outputs/metrics")
