@@ -108,25 +108,5 @@ def train_and_save(model_path: Path = OUT_MODELS / "model_titanic.joblib") -> Pa
     return model_path
 
 
-# -------- predict test & save submission --------
-def predict_submission(
-    model_path: Path, sub_path: Path = OUT_SUB / "submission.csv"
-) -> Path:
-    model: Pipeline = joblib.load(model_path)
-    df_test = load_test()
-
-    y_pred = model.predict(df_test)  # <- predict (internally runs preprocess + clf)
-    sub = pd.DataFrame(
-        {
-            "PassengerId": df_test["PassengerId"],
-            "Survived": y_pred.astype(int),
-        }
-    )
-    sub.to_csv(sub_path, index=False)
-    print(f"Wrote submission -> {sub_path}")
-    return sub_path
-
-
 if __name__ == "__main__":
-    model_path = train_and_save()
-    predict_submission(model_path)
+    train_and_save()
