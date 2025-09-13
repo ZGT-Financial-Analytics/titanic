@@ -4,7 +4,7 @@ Provides helpers to build preprocessing and modeling pipelines in a modular
 way. Intended to be imported by evaluation and training scripts.
 """
 
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal
 
 from sklearn.base import BaseEstimator
 from sklearn.compose import ColumnTransformer
