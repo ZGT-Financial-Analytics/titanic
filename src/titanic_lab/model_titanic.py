@@ -10,6 +10,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
 
 # paths
 from titanic_lab.paths import ROOT, TRAIN_CSV
@@ -75,8 +76,8 @@ def build_preprocessor() -> ColumnTransformer:
     return pre
 
 
-# model builder with two stage pipeline; preprocessing and fit/predict processed data
-def build_model() -> Pipeline:
+# ---------------- Model Selection ----------------
+def build_model_logreg() -> Pipeline:
     pre = build_preprocessor()
     clf = LogisticRegression(
         max_iter=1000,
@@ -100,7 +101,7 @@ def train_and_save(model_path: Path = OUT_MODELS / "model_titanic.joblib") -> Pa
     # Belt-and-suspenders: drop target (ColumnTransformer would drop anyway)
     X = df_train.drop(columns=["Survived"])
 
-    model = build_model()
+    model = build_model_logreg()
     model.fit(X, y)  # <- fit (learn imputers, scalers, OHE vocab + classifier weights)
 
     joblib.dump(model, model_path)
