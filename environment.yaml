@@ -9,11 +9,9 @@ dependencies:
   - vs2015_runtime
   - numpy
   - scikit-learn
-  - matplotlib
-  - seaborn
-  - plotly
-  - jupyter
+  - xgboost
   - jupyterlab
+  - jupyter
   - ipykernel
   - pip
   - pip:

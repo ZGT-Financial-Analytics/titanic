@@ -10,6 +10,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
 
 # paths
 from titanic_lab.paths import ROOT, TRAIN_CSV
@@ -75,22 +77,121 @@ def build_preprocessor() -> ColumnTransformer:
     return pre
 
 
-# model builder with two stage pipeline; preprocessing and fit/predict processed data
-def build_model() -> Pipeline:
+# ---------------- Model Selection ----------------
+def build_model_logreg() -> Pipeline:
     pre = build_preprocessor()
     clf = LogisticRegression(
         max_iter=1000,
-        solver="lbfgs",  # dense-friendly; thanks to dense OHE above
-        class_weight=None,  # flip to "balanced" if you want
+        solver="lbfgs",
+        class_weight=None,
         n_jobs=None,
     )
-    model = Pipeline(
-        steps=[
-            ("pre", pre),
-            ("clf", clf),
-        ]
+    return Pipeline([("pre", pre), ("clf", clf)])
+
+
+def build_model_xgb(
+    *,
+    n_estimators: int = 500,
+    learning_rate: float = 0.05,
+    max_depth: int = 4,
+    subsample: float = 0.9,
+    colsample_bytree: float = 0.9,
+    reg_lambda: float = 1.0,
+    reg_alpha: float = 0.0,
+    random_state: int = 42,
+) -> Pipeline:
+    pre = build_preprocessor()
+    xgb = XGBClassifier(
+        objective="binary:logistic",
+        tree_method="hist",
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        max_depth=max_depth,
+        subsample=subsample,
+        colsample_bytree=colsample_bytree,
+        reg_lambda=reg_lambda,
+        reg_alpha=reg_alpha,
+        n_jobs=-1,
+        random_state=random_state,
     )
-    return model
+    return Pipeline([("pre", pre), ("clf", xgb)])
+
+
+def build_model(algo: str = "logreg") -> Pipeline:
+    """Factory: 'logreg' (default) or 'xgb'."""
+    algo = algo.lower()
+    if algo == "xgb":
+        return build_model_xgb()
+    return build_model_logreg()
+
+
+# ---- Optional: early-stopping flavor (still returns a Pipeline) ----
+def build_model_xgb_earlystop(
+    *,
+    val_size: float = 0.2,
+    random_state: int = 42,
+    early_stopping_rounds: int = 50,
+    # XGB knobs (sensible defaults)
+    n_estimators: int = 2000,
+    learning_rate: float = 0.05,
+    max_depth: int = 4,
+    subsample: float = 0.9,
+    colsample_bytree: float = 0.9,
+    reg_lambda: float = 1.0,
+    reg_alpha: float = 0.0,
+) -> Pipeline:
+    """
+    Fits preprocessor + XGB with early stopping on a holdout split,
+    then returns a single Pipeline frozen to best_iteration.
+    """
+    df = load_train()
+    y = df["Survived"].astype(int)
+    X = df.drop(columns=["Survived"])
+
+    # Fit preprocessor first to expose eval_set cleanly
+    pre = build_preprocessor()
+    X_tr, X_val, y_tr, y_val = train_test_split(
+        X, y, test_size=val_size, stratify=y, random_state=random_state
+    )
+    X_tr_t = pre.fit_transform(X_tr, y_tr)
+    X_val_t = pre.transform(X_val)
+
+    booster = XGBClassifier(
+        objective="binary:logistic",
+        tree_method="hist",
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        max_depth=max_depth,
+        subsample=subsample,
+        colsample_bytree=colsample_bytree,
+        reg_lambda=reg_lambda,
+        reg_alpha=reg_alpha,
+        n_jobs=-1,
+        random_state=random_state,
+    )
+    booster.fit(
+        X_tr_t,
+        y_tr,
+        eval_set=[(X_val_t, y_val)],
+        eval_metric="auc",
+        early_stopping_rounds=early_stopping_rounds,
+        verbose=False,
+    )
+
+    # Freeze to best # of trees
+    best_ntree = (
+        booster.best_iteration + 1
+        if booster.best_iteration is not None
+        else booster.n_estimators
+    )
+    booster.set_params(n_estimators=best_ntree)
+
+    # Refit booster on ALL data transformed by pre
+    X_all_t = pre.transform(X)
+    booster.fit(X_all_t, y)
+
+    # Return a unified artifact
+    return Pipeline([("pre", pre), ("clf", booster)])
 
 
 # -------- train & save --------
@@ -100,7 +201,7 @@ def train_and_save(model_path: Path = OUT_MODELS / "model_titanic.joblib") -> Pa
     # Belt-and-suspenders: drop target (ColumnTransformer would drop anyway)
     X = df_train.drop(columns=["Survived"])
 
-    model = build_model()
+    model = build_model_logreg()
     model.fit(X, y)  # <- fit (learn imputers, scalers, OHE vocab + classifier weights)
 
     joblib.dump(model, model_path)
