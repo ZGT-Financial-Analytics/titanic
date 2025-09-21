@@ -8,6 +8,8 @@ import argparse
 import json
 import pandas as pd
 import time
+import joblib
+
 from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate
 from sklearn.metrics import (
     accuracy_score,
@@ -18,6 +20,8 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
 )
+
+# NEW: import build_model and OUT_SUB from your modular script
 from titanic_lab.model_titanic import load_train, load_test, build_model, OUT_SUB
 
 SRC_PATH = Path(__file__).resolve().parent.parent / "src"
@@ -29,22 +33,28 @@ OUT_METRICS = Path("outputs/metrics")
 OUT_METRICS.mkdir(parents=True, exist_ok=True)
 
 
-def evaluate_holdout(seed: int = 42) -> dict:
-    """Quick sanity-check: single stratified holdout with rich diagnostics."""
+def evaluate_holdout(
+    seed: int = 42, *, algo: str = "logreg", model_path: Path | None = None
+) -> dict:
+    """Quick sanity-check: single stratified holdout with rich diagnostics.
+
+    If model_path is given, loads a prefit Pipeline and evaluates it (no refit).
+    Otherwise builds `build_model(algo)` and fits on the holdout train split.
+    """
     df = load_train()
     y = df["Survived"].astype(int)
     X = df.drop(columns=["Survived"])
 
     X_tr, X_val, y_tr, y_val = train_test_split(
-        X,
-        y,
-        test_size=0.2,
-        stratify=y,
-        random_state=seed,
+        X, y, test_size=0.2, stratify=y, random_state=seed
     )
 
-    pipe = build_model()
-    pipe.fit(X_tr, y_tr)
+    if model_path is not None:
+        pipe = joblib.load(model_path)
+        # assume artifact is fully fit (e.g., XGB with early stopping frozen)
+    else:
+        pipe = build_model(algo=algo)
+        pipe.fit(X_tr, y_tr)
 
     y_pred = pipe.predict(X_val)
     proba_ok = hasattr(pipe, "predict_proba")
@@ -52,7 +62,6 @@ def evaluate_holdout(seed: int = 42) -> dict:
 
     acc = float(accuracy_score(y_val, y_pred))
     auc = float(roc_auc_score(y_val, y_proba)) if y_proba is not None else float("nan")
-
     prec = float(precision_score(y_val, y_pred, pos_label=1))
     rec = float(recall_score(y_val, y_pred, pos_label=1))
     f1_ = float(f1_score(y_val, y_pred, pos_label=1))
@@ -69,28 +78,33 @@ def evaluate_holdout(seed: int = 42) -> dict:
 
     return {
         "mode": "holdout",
+        "algo": algo,
+        "used_model_path": str(model_path) if model_path else None,
         "acc": acc,
         "auc": auc,
         "precision_pos": prec,
         "recall_pos": rec,
         "f1_pos": f1_,
-        # make them JSON-friendly if you want them in the metrics file:
         "confusion_matrix": cm.tolist(),
-        # optional: structured report for later analysis
         "classification_report": classification_report(y_val, y_pred, output_dict=True),
         "seed": seed,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
 
 
-def evaluate_cv(n_splits: int = 5, seed: int = 42, verbose: bool = False) -> dict:
-    """Stratified K-fold CV with accuracy (Kaggle metric) + ROC-AUC + precision/recall/F1."""
+def evaluate_cv(
+    n_splits: int = 5, seed: int = 42, verbose: bool = False, *, algo: str = "logreg"
+) -> dict:
+    """Stratified K-fold CV with accuracy (Kaggle metric) + ROC-AUC + precision/recall/F1.
+
+    Always builds a fresh estimator per fold via build_model(algo) so refitting is correct.
+    """
     df = load_train()
     y = df["Survived"].astype(int)
     X = df.drop(columns=["Survived"])
 
     cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-    pipe = build_model()
+    pipe = build_model(algo=algo)
 
     res = cross_validate(
         pipe,
@@ -108,7 +122,6 @@ def evaluate_cv(n_splits: int = 5, seed: int = 42, verbose: bool = False) -> dic
         n_jobs=-1,
     )
 
-    # summary stats (ensure built-in floats for JSON)
     acc_mean, acc_std = float(res["test_acc"].mean()), float(res["test_acc"].std())
     roc_mean, roc_std = float(res["test_roc"].mean()), float(res["test_roc"].std())
     prec_mean, prec_std = float(res["test_prec"].mean()), float(res["test_prec"].std())
@@ -118,6 +131,7 @@ def evaluate_cv(n_splits: int = 5, seed: int = 42, verbose: bool = False) -> dic
     metrics = {
         "schema_version": 1,
         "mode": "cv",
+        "algo": algo,
         "n_splits": int(n_splits),
         "acc_mean": acc_mean,
         "acc_std": acc_std,
@@ -161,13 +175,13 @@ def persist_metrics(metrics: dict, tag: str) -> Path:
     return out
 
 
-def refit_full_and_submit(tag: str) -> Path:
-    """Optional: fit on all training data and write a timestamped submission."""
+def refit_full_and_submit(tag: str, *, algo: str = "logreg") -> Path:
+    """Fit on all training data using the chosen algo and write a timestamped submission."""
     df_train = load_train()
     y = df_train["Survived"].astype(int)
     X = df_train.drop(columns=["Survived"])
 
-    pipe = build_model()
+    pipe = build_model(algo=algo)
     pipe.fit(X, y)
 
     df_test = load_test()
@@ -195,27 +209,48 @@ def main():
     )
     ap.add_argument("--seed", type=int, default=42, help="Random seed for splits.")
     ap.add_argument(
+        "--algo",
+        choices=["logreg", "xgb"],
+        default="logreg",
+        help="Which model to build for evaluation and submission.",
+    )
+    ap.add_argument(
+        "--model-path",
+        type=str,
+        default=None,
+        help="(holdout only) Path to a prefit joblib Pipeline to evaluate (e.g., XGB with early stopping).",
+    )
+    ap.add_argument(
         "--tag",
         type=str,
-        default="logreg_baseline",
-        help="Short label saved into filenames.",
+        default=None,
+        help="Short label saved into filenames. Defaults to '<algo>_baseline' if not provided.",
     )
     ap.add_argument(
         "--submit",
         action="store_true",
-        help="After eval, refit on full train and write a submission.",
+        help="After eval, refit on full train (with the same --algo) and write a submission.",
     )
     args = ap.parse_args()
 
-    if args.mode == "cv":
-        metrics = evaluate_cv(n_splits=args.cv, seed=args.seed)
-    else:
-        metrics = evaluate_holdout(seed=args.seed)
+    tag = args.tag or f"{args.algo}_baseline"
 
-    persist_metrics(metrics, tag=args.tag)
+    if args.mode == "cv":
+        if args.model_path:
+            raise SystemExit(
+                "--model-path is not compatible with --mode cv (cross-validate refits the model)."
+            )
+        metrics = evaluate_cv(n_splits=args.cv, seed=args.seed, algo=args.algo)
+    else:
+        model_path = Path(args.model_path) if args.model_path else None
+        metrics = evaluate_holdout(
+            seed=args.seed, algo=args.algo, model_path=model_path
+        )
+
+    persist_metrics(metrics, tag=tag)
 
     if args.submit:
-        refit_full_and_submit(tag=args.tag)
+        refit_full_and_submit(tag=tag, algo=args.algo)
 
 
 if __name__ == "__main__":
