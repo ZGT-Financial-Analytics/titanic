@@ -28,8 +28,17 @@ OUT_SUB.mkdir(parents=True, exist_ok=True)
 
 
 # establishing numerical and categorical columns to route through respective pipelines in ColumnTransformer
-NUMERIC_COLS = ["Age", "Fare", "SibSp", "Parch"]
+NUMERIC_COLS = ["Age", "Fare", "SibSp", "Parch", "FamilySize"]
 CAT_COLS = ["Sex", "Embarked", "Pclass"]
+
+
+# Feature engineering function
+def add_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add engineered features to the dataframe."""
+    df = df.copy()
+    # Family size = SibSp + Parch + 1 (including the passenger themselves)
+    df["FamilySize"] = df["SibSp"] + df["Parch"] + 1
+    return df
 
 
 # TRAIN data loading function, with type conversions for categorical columns TRAIN
@@ -38,6 +47,7 @@ def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
+    df = add_features(df)
     return df
 
 
@@ -47,6 +57,7 @@ def load_test(path: Path | str = TEST_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
+    df = add_features(df)
     return df
 
 
