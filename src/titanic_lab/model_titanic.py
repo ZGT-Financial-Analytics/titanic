@@ -28,23 +28,16 @@ OUT_SUB.mkdir(parents=True, exist_ok=True)
 
 
 # establishing numerical and categorical columns to route through respective pipelines in ColumnTransformer
-NUMERIC_COLS = ["Age", "Fare", "SibSp", "Parch", "boy_master", "boy_nonmaster"]
+NUMERIC_COLS = [
+    "Age",
+    "Fare",
+    "SibSp",
+    "Parch",
+]  # Removed boy_master, boy_nonmaster - they don't help
 CAT_COLS = ["Sex", "Embarked", "Pclass"]
 
 
 def _add_boy_title_cols(df: pd.DataFrame) -> pd.DataFrame:
-    """Add engineered boy/title features to the DataFrame.
-
-    Extracts title from Name column and creates binary features:
-    - boy_master: 1 if male, under 18, and has "Master" title
-    - boy_nonmaster: 1 if male, under 18, and does NOT have "Master" title
-
-    Args:
-        df: Input DataFrame with Name, Sex, Age columns
-
-    Returns:
-        DataFrame with added boy_master and boy_nonmaster columns
-    """
     df = df.copy()
     if "Title" not in df:
         df["Title"] = (
@@ -62,7 +55,7 @@ def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
-    df = _add_boy_title_cols(df)  # Add engineered boy/title features
+    # Removed _add_boy_title_cols() - features didn't improve performance
     return df
 
 
@@ -72,7 +65,7 @@ def load_test(path: Path | str = TEST_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
-    df = _add_boy_title_cols(df)  # Add engineered boy/title features
+    # Removed _add_boy_title_cols() - features didn't improve performance
     return df
 
 
@@ -104,7 +97,8 @@ def build_preprocessor() -> ColumnTransformer:
 
 
 # ---------------- Model Selection ----------------
-def build_model_logreg() -> Pipeline:
+def build_model_logreg(**kwargs) -> Pipeline:
+    """Build logistic regression model. Ignores extra kwargs for compatibility."""
     pre = build_preprocessor()
     clf = LogisticRegression(
         max_iter=1000,
@@ -143,12 +137,18 @@ def build_model_xgb(
     return Pipeline([("pre", pre), ("clf", xgb)])
 
 
-def build_model(algo: str = "logreg") -> Pipeline:
-    """Factory: 'logreg' (default) or 'xgb'."""
+def build_model(algo: str = "logreg", **kwargs) -> Pipeline:
+    """Factory: 'logreg' (default) or 'xgb'.
+
+    Args:
+        algo: Algorithm choice - 'logreg' or 'xgb'
+        **kwargs: Additional parameters passed to the specific model builder
+                 (e.g., n_estimators for XGBoost)
+    """
     algo = algo.lower()
     if algo == "xgb":
-        return build_model_xgb()
-    return build_model_logreg()
+        return build_model_xgb(**kwargs)
+    return build_model_logreg(**kwargs)
 
 
 # ---- Optional: early-stopping flavor (still returns a Pipeline) ----
@@ -194,13 +194,13 @@ def build_model_xgb_earlystop(
         reg_alpha=reg_alpha,
         n_jobs=-1,
         random_state=random_state,
+        early_stopping_rounds=early_stopping_rounds,
+        eval_metric="auc",
     )
     booster.fit(
         X_tr_t,
         y_tr,
         eval_set=[(X_val_t, y_val)],
-        eval_metric="auc",
-        early_stopping_rounds=early_stopping_rounds,
         verbose=False,
     )
 
