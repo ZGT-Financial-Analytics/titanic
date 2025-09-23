@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import joblib
 import pandas as pd
-
+import numpy as np  # noqa: F401
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
