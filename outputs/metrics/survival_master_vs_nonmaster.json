@@ -1,0 +1,11 @@
+{
+ "comparison": "boys(<18): Master vs Non-Master",
+ "n1_master": 36,
+ "n2_nonmaster": 22,
+ "mean1_master": 0.6,
+ "mean2_nonmaster": 0.1,
+ "diff_means": 0.5,
+ "SED": 0.1,
+ "t_score": 4.7,
+ "timestamp": "2025-09-23T13:04:17"
+}

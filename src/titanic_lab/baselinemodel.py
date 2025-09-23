@@ -22,7 +22,7 @@ def predict_gender_rule(df):
 
 def main() -> None:
     # Load data
-    train = pd.read_csv(TRAIN_CSV)
+    pd.read_csv(TRAIN_CSV)
     test = pd.read_csv(TEST_CSV)
 
     pred_test = predict_gender_rule(test)

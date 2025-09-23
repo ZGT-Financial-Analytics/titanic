@@ -1,63 +1,116 @@
+# %%
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from scipy import stats
-import statsmodels.api as sm
-import statsmodels.stats.api as sms
-from statsmodels.stats.proportion import proportions_ztest, proportion_confint
 import matplotlib.pyplot as plt
-
-from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.compose import ColumnTransformer
-from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
+import json
+from datetime import datetime
 
 # creating mean difference test function
 
+try:
+    from titanic_lab.paths import ROOT, TRAIN_CSV  # type: ignore[attr-defined]
 
-def mean_diff_test(data, group_col, value_col, alpha=0.05):
-    """
-    Perform a mean difference test between two groups.
+    DATA_ROOT = Path(ROOT)
+    TRAIN_PATH = Path(TRAIN_CSV)
+except Exception:
+    DATA_ROOT = Path(".")
+    TRAIN_PATH = DATA_ROOT / "data" / "train.csv"
+df = pd.read_csv(TRAIN_PATH)
+# %%
+# title
+df["Title"] = (
+    df["Name"].str.extract(r",\s*([^\.]+)\.").iloc[:, 0].str.strip().str.lower()
+)
 
-    Parameters:
-    data (pd.DataFrame): The input dataframe containing the data.
-    group_col (str): The column name representing the groups.
-    value_col (str): The column name representing the values to compare.
-    alpha (float): Significance level for the test.
+# boys (<18, male, age present)
+boys = df[df["Sex"].str.lower().eq("male") & df["Age"].notna() & df["Age"].lt(18)]
 
-    Returns:
-    dict: A dictionary containing the test statistic, p-value, and conclusion.
-    """
-    groups = data[group_col].unique()
-    if len(groups) != 2:
-        raise ValueError("The group column must contain exactly two unique values.")
+# survival rates
+rate_master = boys[boys["Title"].eq("master")]["Survived"].mean()
+rate_nonmaster = boys[~boys["Title"].eq("master")]["Survived"].mean()
 
-    group1 = data[data[group_col] == groups[0]][value_col]
-    group2 = data[data[group_col] == groups[1]][value_col]
+# bar plot
+labels = ["Master", "Non-Master"]
+rates = [rate_master, rate_nonmaster]
 
-    # Check for normality
-    _, p1 = stats.shapiro(group1)
-    _, p2 = stats.shapiro(group2)
+plt.figure(figsize=(5, 4))
+plt.bar(labels, rates)
+plt.ylim(0, 1)
+plt.ylabel("Survival rate")
+plt.title("Boys (<18, male): Survival by 'Master' title")
+for i, v in enumerate(rates):
+    plt.text(i, v + 0.02, f"{v:.2f}", ha="center")
+plt.tight_layout()
+plt.show()
 
-    normal = p1 > alpha and p2 > alpha
+# %%
+print(df.columns)
+# %%
+# counts
+n_master = boys["Title"].eq("master").sum()
+n_nonmaster = (~boys["Title"].eq("master")).sum()
+counts = [int(n_master), int(n_nonmaster)]
 
-    # Check for equal variances
-    _, p_var = stats.levene(group1, group2)
-    equal_var = p_var > alpha
+# update labels to show counts
+labels = [f"Master (n={counts[0]})", f"Non-Master (n={counts[1]})"]
 
-    if normal:
-        if equal_var:
-            stat, p_value = stats.ttest_ind(group1, group2, equal_var=True)
-        else:
-            stat, p_value = stats.ttest_ind(group1, group2, equal_var=False)
-    else:
-        stat, p_value = stats.mannwhitneyu(group1, group2)
+# annotate bars with rate + count
+plt.figure(figsize=(5, 4))
+plt.bar(labels, rates)
+plt.ylim(0, 1)
+plt.ylabel("Survival rate")
+plt.title("Boys (<18, male): Survival by 'Master' title")
+for i, v in enumerate(rates):
+    plt.text(i, v + 0.02, f"{v:.2f}\n(n={counts[i]})", ha="center", va="bottom")
+plt.tight_layout()
+plt.show()
+# %%
+# %%
+# SED and t-score (Welch) for survival-rate means: Master vs Non-Master (boys < 18)
+g1 = boys.loc[boys["Title"].eq("master"), "Survived"].astype(float)
+g2 = boys.loc[~boys["Title"].eq("master"), "Survived"].astype(float)
 
-    conclusion = (
-        "Reject null hypothesis"
-        if p_value < alpha
-        else "Fail to reject null hypothesis"
-    )
+n1, n2 = g1.size, g2.size
+m1, m2 = g1.mean(), g2.mean()
+s1, s2 = g1.var(ddof=1), g2.var(ddof=1)  # sample variances
 
-    return {"test_statistic": stat, "p_value": p_value, "conclusion": conclusion}
+sed = np.sqrt(s1 / n1 + s2 / n2)  # standard error of the difference in means (Welch)
+t_score = (m1 - m2) / sed
+
+# Welch-Satterthwaite df (optional to print, used here for completeness)
+df_welch = (s1 / n1 + s2 / n2) ** 2 / (
+    (s1**2) / ((n1**2) * (n1 - 1)) + (s2**2) / ((n2**2) * (n2 - 1))
+)
+p_two_sided = 2 * stats.t.sf(np.abs(t_score), df=df_welch)
+
+print(f"Master vs Non-Master (boys <18):")
+print(f"n1={n1}, n2={n2}")
+print(f"mean1={m1:.4f}, mean2={m2:.4f}, diff={m1 - m2:.4f}")
+print(f"SED={sed:.6f}")
+print(f"t-score={t_score:.4f}  (df≈{df_welch:.1f}, p={p_two_sided:.4g})")
+# %%
+
+
+OUT_METRICS = Path("outputs/metrics")
+OUT_METRICS.mkdir(parents=True, exist_ok=True)
+out_path = OUT_METRICS / "survival_master_vs_nonmaster.json"
+
+results = {
+    "comparison": "boys(<18): Master vs Non-Master",
+    "n1_master": int(n1),
+    "n2_nonmaster": int(n2),
+    "mean1_master": round(m1, 1),
+    "mean2_nonmaster": round(m2, 1),
+    "diff_means": round(m1 - m2, 1),
+    "SED": round(sed, 1),
+    "t_score": round(t_score, 1),
+    "timestamp": datetime.now().isoformat(timespec="seconds"),
+}
+
+
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(results, f, indent=1)
+
+# %%
