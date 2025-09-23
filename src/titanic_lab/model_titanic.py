@@ -28,8 +28,32 @@ OUT_SUB.mkdir(parents=True, exist_ok=True)
 
 
 # establishing numerical and categorical columns to route through respective pipelines in ColumnTransformer
-NUMERIC_COLS = ["Age", "Fare", "SibSp", "Parch"]
+NUMERIC_COLS = ["Age", "Fare", "SibSp", "Parch", "boy_master", "boy_nonmaster"]
 CAT_COLS = ["Sex", "Embarked", "Pclass"]
+
+
+def _add_boy_title_cols(df: pd.DataFrame) -> pd.DataFrame:
+    """Add engineered boy/title features to the DataFrame.
+
+    Extracts title from Name column and creates binary features:
+    - boy_master: 1 if male, under 18, and has "Master" title
+    - boy_nonmaster: 1 if male, under 18, and does NOT have "Master" title
+
+    Args:
+        df: Input DataFrame with Name, Sex, Age columns
+
+    Returns:
+        DataFrame with added boy_master and boy_nonmaster columns
+    """
+    df = df.copy()
+    if "Title" not in df:
+        df["Title"] = (
+            df["Name"].str.extract(r",\s*([^\.]+)\.").iloc[:, 0].str.strip().str.lower()
+        )
+    is_boy = df["Sex"].str.lower().eq("male") & df["Age"].lt(18)
+    df["boy_master"] = (is_boy & df["Title"].eq("master")).astype(int)
+    df["boy_nonmaster"] = (is_boy & ~df["Title"].eq("master")).astype(int)
+    return df
 
 
 # TRAIN data loading function, with type conversions for categorical columns TRAIN
@@ -38,6 +62,7 @@ def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
+    df = _add_boy_title_cols(df)  # Add engineered boy/title features
     return df
 
 
@@ -47,6 +72,7 @@ def load_test(path: Path | str = TEST_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
+    df = _add_boy_title_cols(df)  # Add engineered boy/title features
     return df
 
 
