@@ -112,5 +112,7 @@ results = {
 
 with open(out_path, "w", encoding="utf-8") as f:
     json.dump(results, f, indent=1)
-
-# %%
+# -----------------------------------
+# above feature resulted in same performance, so we're not using it
+# However, there is real statistical difference there, but perhaps the increase in dimensionality made it not useful
+# we will continue to try to get value out of the title category since interactions of columns already in use are already captured with XGBoost

@@ -33,19 +33,20 @@ NUMERIC_COLS = [
     "Fare",
     "SibSp",
     "Parch",
-]  # Removed boy_master, boy_nonmaster - they don't help
+    "Age_Sex_interaction",  # Try explicit interaction term instead
+]
 CAT_COLS = ["Sex", "Embarked", "Pclass"]
 
 
-def _add_boy_title_cols(df: pd.DataFrame) -> pd.DataFrame:
+def _add_interaction_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add interaction features that might capture non-linear relationships."""
     df = df.copy()
-    if "Title" not in df:
-        df["Title"] = (
-            df["Name"].str.extract(r",\s*([^\.]+)\.").iloc[:, 0].str.strip().str.lower()
-        )
-    is_boy = df["Sex"].str.lower().eq("male") & df["Age"].lt(18)
-    df["boy_master"] = (is_boy & df["Title"].eq("master")).astype(int)
-    df["boy_nonmaster"] = (is_boy & ~df["Title"].eq("master")).astype(int)
+
+    # Age-Sex interaction (captures the boy effect more efficiently)
+    df["Age_Sex_interaction"] = df["Age"].fillna(df["Age"].median()) * (
+        df["Sex"] == "male"
+    ).astype(int)
+
     return df
 
 
@@ -55,7 +56,7 @@ def load_train(path: Path | str = TRAIN_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
-    # Removed _add_boy_title_cols() - features didn't improve performance
+    df = _add_interaction_features(df)  # Try interaction approach instead
     return df
 
 
@@ -65,7 +66,7 @@ def load_test(path: Path | str = TEST_CSV) -> pd.DataFrame:
     df["Pclass"] = df["Pclass"].astype("category")
     df["Sex"] = df["Sex"].astype("category")
     df["Embarked"] = df["Embarked"].astype("category")
-    # Removed _add_boy_title_cols() - features didn't improve performance
+    df = _add_interaction_features(df)  # Try interaction approach instead
     return df
 
 
