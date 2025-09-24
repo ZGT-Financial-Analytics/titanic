@@ -177,7 +177,40 @@ print(f"Categorical columns: {len(categorical_cols)}")
 
 # %%
 # Quick CSV export
-df_viz.to_csv("titanic_viz_data.csv", index=False)
-print("💾 Exported to titanic_viz_data.csv")
+# df_viz.to_csv("titanic_viz_data.csv", index=False)
+# print("💾 Exported to titanic_viz_data.csv")
 
+# %%
+# Create separate DataFrames for males and females, sorted by age
+print("👥 CREATING GENDER-SEPARATED DATAFRAMES:")
+print("=" * 45)
+
+# Check what Sex values we actually have
+print(f"Available Sex values: {df_viz['Sex'].unique()}")
+print(f"Sex value counts:\n{df_viz['Sex'].value_counts()}")
+
+# Filter based on actual values (handle both original and reduced formats)
+if "M" in df_viz["Sex"].values:
+    # If Sex was reduced to M/F
+    df_male = df_viz[df_viz["Sex"] == "M"].copy()
+    df_female = df_viz[df_viz["Sex"] == "F"].copy()
+    print("\n✅ Using reduced Sex values (M/F)")
+else:
+    # If Sex still has original values
+    df_male = df_viz[df_viz["Sex"] == "male"].copy()
+    df_female = df_viz[df_viz["Sex"] == "female"].copy()
+    print("\n✅ Using original Sex values (male/female)")
+
+# Sort by age
+df_male = df_male.sort_values("Age", ascending=False).reset_index(drop=True)
+df_female = df_female.sort_values("Age", ascending=False).reset_index(drop=True)
+
+
+# %%
+print(df_male.head())
+
+# %%
+df_male.to_csv("Grouped By Male, ordered by Age.csv")
+# print("💾 Exported to titanic_viz_data.csv")
+df_female.to_csv("Grouped By Female, ordered by Age.csv")
 # %%
