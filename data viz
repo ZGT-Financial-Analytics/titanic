@@ -1,0 +1,178 @@
+# %%
+import numpy as np
+import pandas as pd
+from pathlib import Path
+from scipy import stats
+import matplotlib.pyplot as plt
+import json
+from datetime import datetime
+
+# creating mean difference test function
+
+# paths
+from titanic_lab.paths import ROOT, TRAIN_CSV
+
+try:
+    from titanic_lab.paths import TEST_CSV  # type: ignore
+except Exception:
+    TEST_CSV = Path(ROOT) / "data" / "test.csv"
+# storage for outputs
+OUT_MODELS = Path(ROOT) / "outputs" / "models"
+OUT_SUB = Path(ROOT) / "outputs" / "submissions"
+OUT_MODELS.mkdir(parents=True, exist_ok=True)
+OUT_SUB.mkdir(parents=True, exist_ok=True)
+
+# %%
+train_df = pd.read_csv(TRAIN_CSV)
+test_df = pd.read_csv(TEST_CSV)
+# %%
+# COMBINING TRAIN AND TEST DATA FOR EDA ONLY, PLEASE DO NOT USE FOR MODELING, LEAKAGE WILL OCCUR
+df_train_test_vis = pd.concat([train_df, test_df], ignore_index=True)
+
+
+# %%
+def create_viz_dataframe_with_reduced_names(df):
+    """
+    Create a copy of the DataFrame with Name column reduced to Title + Last Name for visualization.
+
+    Examples:
+    "Braund, Mr. Owen Harris" → "Mr. Braund"
+    "Cumings, Mrs. John Bradley (Florence Briggs Thayer)" → "Mrs. Cumings"
+    "Heikkinen, Miss. Laina" → "Miss. Heikkinen"
+    """
+    df_viz = df.copy()
+
+    def extract_title_lastname(name):
+        if pd.isna(name):
+            return "Unknown"
+
+        try:
+            # Split on comma to get last name and rest
+            parts = name.split(", ")
+            if len(parts) < 2:
+                return name  # Return original if format is unexpected
+
+            last_name = parts[0].strip()
+
+            # Extract title from the second part (before the dot)
+            rest = parts[1].strip()
+            if "." in rest:
+                title = rest.split(".")[0].strip() + "."
+            else:
+                title = "No Title"
+
+            return f"{title} {last_name}"
+
+        except Exception:
+            return name  # Return original name if parsing fails
+
+    # Apply the transformation
+    df_viz["Name"] = df_viz["Name"].apply(extract_title_lastname)
+
+    return df_viz
+
+
+# %%
+# Create visualization DataFrame with reduced names
+df_viz = create_viz_dataframe_with_reduced_names(df_train_test_vis)
+
+# %%
+# Show examples of the name transformation
+print("📝 ORIGINAL vs REDUCED NAMES (first 10 examples):")
+print("-" * 60)
+for i in range(min(10, len(df_train_test_vis))):
+    original = df_train_test_vis["Name"].iloc[i]
+    reduced = df_viz["Name"].iloc[i]
+    print(f"Original: {original}")
+    print(f"Reduced:  {reduced}")
+    print()
+
+# %%
+print(df_viz.info)
+# %%
+df_viz.drop(columns=["Ticket", "Cabin", "Embarked"], inplace=True)
+# %%
+print(df_viz.columns)
+# %%
+df_viz.drop("PassengerId", axis=1, inplace=True)
+# %%
+print(df_viz.columns)
+
+
+# %%
+def reduce_sex_column(df):
+    """
+    Reduce Sex column to just 'M' or 'F' for cleaner visualization.
+
+    'male' → 'M'
+    'female' → 'F'
+    """
+    df_copy = df.copy()
+
+    # Map the values
+    sex_mapping = {
+        "male": "M",
+        "female": "F",
+        "Male": "M",  # Handle potential capitalization variations
+        "Female": "F",
+        "MALE": "M",
+        "FEMALE": "F",
+    }
+
+    df_copy["Sex"] = df_copy["Sex"].map(sex_mapping)
+
+    # Handle any unmapped values (just in case)
+    df_copy["Sex"] = df_copy["Sex"].fillna("Unknown")
+
+    return df_copy
+
+
+# %%
+# Apply sex column reduction
+df_viz = reduce_sex_column(df_viz)
+
+# %%
+# Show the sex column transformation
+print("👫 SEX COLUMN TRANSFORMATION:")
+print("-" * 30)
+print("Value counts before and after:")
+print("\nOriginal Sex values in source data:")
+print(df_train_test_vis["Sex"].value_counts())
+print("\nReduced Sex values in viz data:")
+print(df_viz["Sex"].value_counts())
+
+# %%
+print(df_viz.head(5))
+
+# %%
+# Find maximum value of each column
+print("📊 MAXIMUM VALUES BY COLUMN:")
+print("=" * 40)
+
+# Get numeric columns
+numeric_cols = df_viz.select_dtypes(include=["number"]).columns
+print(f"\n🔢 NUMERIC COLUMNS ({len(numeric_cols)} columns):")
+print("-" * 25)
+for col in numeric_cols:
+    max_val = df_viz[col].max()
+    print(f"{col:<15}: {max_val}")
+
+# Get categorical/object columns
+categorical_cols = df_viz.select_dtypes(include=["object"]).columns
+print(f"\n📝 CATEGORICAL COLUMNS ({len(categorical_cols)} columns):")
+print("-" * 30)
+for col in categorical_cols:
+    # For categorical, show the "max" alphabetically and most frequent
+    max_alphabetical = df_viz[col].max()
+    most_frequent = df_viz[col].mode().iloc[0] if len(df_viz[col].mode()) > 0 else "N/A"
+    print(f"{col:<15}: '{max_alphabetical}' (alphabetically)")
+    print(f"{'':<15}  Most frequent: '{most_frequent}'")
+
+# Overall summary
+print(f"\n🎯 SUMMARY:")
+print("-" * 15)
+print(f"Total columns analyzed: {len(df_viz.columns)}")
+print(f"Numeric columns: {len(numeric_cols)}")
+print(f"Categorical columns: {len(categorical_cols)}")
+
+# %%
