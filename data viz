@@ -176,3 +176,8 @@ print(f"Numeric columns: {len(numeric_cols)}")
 print(f"Categorical columns: {len(categorical_cols)}")
 
 # %%
+# Quick CSV export
+df_viz.to_csv("titanic_viz_data.csv", index=False)
+print("💾 Exported to titanic_viz_data.csv")
+
+# %%
