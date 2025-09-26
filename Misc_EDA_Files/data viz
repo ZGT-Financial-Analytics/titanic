@@ -213,4 +213,3 @@ print(df_male.head())
 df_male.to_csv("Grouped By Male, ordered by Age.csv")
 # print("💾 Exported to titanic_viz_data.csv")
 df_female.to_csv("Grouped By Female, ordered by Age.csv")
-# %%
