@@ -4,10 +4,10 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from scipy import stats
-import matplotlib.pyplot as plt
-import json
-from datetime import datetime
+from scipy import stats  # noqa: F401
+import matplotlib.pyplot as plt  # noqa: F811
+import json  # noqa: F401
+from datetime import datetime  # noqa: F401
 
 # creating mean difference test function
 
@@ -292,13 +292,13 @@ for _, row in fare_survival.iterrows():
         f"{row['Fare_Bin']:<5}: {row['survival_rate']:.1f}% ({row['count']} passengers)"
     )
 
-print(f"\n🎯 COMBINATION WITH HIGHEST SURVIVAL:")
+print("\n🎯 COMBINATION WITH HIGHEST SURVIVAL:")
 best_combo = pivot_data.loc[pivot_data["mean"].idxmax()]
 print(
     f"{best_combo['Age_Bin']} + {best_combo['Fare_Bin']}: {best_combo['mean']*100:.1f}% ({best_combo['count']} passengers)"
 )
 
-print(f"\n💔 COMBINATION WITH LOWEST SURVIVAL:")
+print("\n💔 COMBINATION WITH LOWEST SURVIVAL:")
 worst_combo = pivot_data.loc[pivot_data["mean"].idxmin()]
 print(
     f"{worst_combo['Age_Bin']} + {worst_combo['Fare_Bin']}: {worst_combo['mean']*100:.1f}% ({worst_combo['count']} passengers)"

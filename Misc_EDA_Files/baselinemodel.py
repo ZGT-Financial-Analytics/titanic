@@ -1,5 +1,5 @@
 from pathlib import Path
-import joblib
+import joblib  # noqa: F401
 import pandas as pd
 import numpy as np  # noqa: F401
 from titanic_lab.paths import ROOT, TRAIN_CSV
