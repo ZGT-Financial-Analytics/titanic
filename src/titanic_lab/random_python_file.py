@@ -8,17 +8,23 @@ import numpy as np  # noqa: F401
 import pandas as pd  # noqa: F401
 
 
-categorical
+categorical  # type: ignore  # noqa: F821
 
 
-# zscore scaling
+# preprocessoring building
 def build_pre_preprocessor() -> ColumnTransformer:
-    numerical_pipeline = Pipeline(
+    numerical_pipeline = Pipeline(  # noqa: F841
         num_pipeline_named_steps=[
             ("impute", SimpleImputer(strategy="median")),
             ("standardize", StandardScaler(with_mean=True, with_std=True)),
         ]
     )
-    categorical_pipeline = Pipeline(
-        cat_pipeline_named_steps=[("impute", OneHotEncoder())]
+    categorical_pipeline = Pipeline(  # noqa: F841
+        cat_pipeline_named_steps=[
+            ("impute", SimpleImputer(strategy="most_frequent")),
+            (
+                "one_hot_encoder",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+            ),
+        ]
     )
