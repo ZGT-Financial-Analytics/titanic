@@ -1,10 +1,8 @@
 # Titanic
 
-
 ## env Setup
 
 conda create env -f environment.yaml
-
 
 ## purpose
 
