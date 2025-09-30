@@ -1,0 +1,29 @@
+# environment-wsl-gpu.yaml
+# For WSL2 + Ubuntu + NVIDIA GPU setup
+name: titanic-gpu
+channels:
+  - rapidsai
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.11
+  - cudatoolkit=11.8
+  - cudf=23.12.*
+  - cupy
+  - pandas=2.3.*
+  - pyarrow=17.*
+  - numpy
+  - scikit-learn
+  - xgboost
+  - jupyterlab
+  - jupyter
+  - ipykernel
+  - pip
+  - pip:
+      - -e .
+
+# Usage instructions:
+# 1. Install WSL2 + Ubuntu: wsl --install Ubuntu
+# 2. Install NVIDIA drivers + CUDA in WSL
+# 3. conda env create -f environment-wsl-gpu.yaml
+# 4. conda activate titanic-gpu

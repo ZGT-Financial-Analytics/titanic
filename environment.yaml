@@ -10,9 +10,14 @@ dependencies:
   - numpy
   - scikit-learn
   - xgboost
+  - polars          # Fast DataFrame library (Windows compatible)
   - jupyterlab
   - jupyter
   - ipykernel
   - pip
   - pip:
       - -e .
+      # Note: For RAPIDS cuDF with NVIDIA GPU on Windows:
+      # 1. Use WSL2 + Ubuntu + CUDA Toolkit
+      # 2. Or use conda-forge rapidsai channel in WSL
+      # 3. Windows native: stick with pandas for now
