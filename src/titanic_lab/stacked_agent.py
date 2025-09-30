@@ -8,7 +8,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, StackingClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 from xgboost import XGBClassifier
@@ -182,11 +183,37 @@ def main() -> None:
     print(f"   CV accuracy: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
     print(f"   Individual folds: {[f'{score:.4f}' for score in cv_scores]}")
 
+    print("📊 Generating out-of-fold probabilities for threshold tuning...")
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    oof_probs = np.zeros_like(y, dtype=float)
+
+    for fold, (train_idx, val_idx) in enumerate(skf.split(X, y), start=1):
+        fold_pipeline = _build_pipeline()
+        fold_pipeline.fit(X.iloc[train_idx], y[train_idx])
+        fold_probs = fold_pipeline.predict_proba(X.iloc[val_idx])[:, 1]
+        oof_probs[val_idx] = fold_probs
+        fold_acc = accuracy_score(y[val_idx], (fold_probs >= 0.5).astype(int))
+        print(f"   Fold {fold} holdout accuracy: {fold_acc:.4f}")
+
+    thresholds = np.linspace(0.3, 0.7, 41)
+    accuracies = [
+        accuracy_score(y, (oof_probs >= thresh).astype(int)) for thresh in thresholds
+    ]
+    best_idx = int(np.argmax(accuracies))
+    best_threshold = float(thresholds[best_idx])
+    best_accuracy = float(accuracies[best_idx])
+
+    print(
+        f"   Best threshold from OOF tuning: {best_threshold:.3f}"
+        f" (accuracy={best_accuracy:.4f})"
+    )
+
     print("🚀 Fitting stacked agent on full training data...")
     pipeline.fit(X, y)
 
-    print("📦 Generating predictions for Kaggle test set...")
-    test_predictions = pipeline.predict(test)
+    print("📦 Generating probability predictions for Kaggle test set...")
+    test_probs = pipeline.predict_proba(test)[:, 1]
+    test_predictions = (test_probs >= best_threshold).astype(int)
 
     survival_rate = np.mean(test_predictions)
     print(
