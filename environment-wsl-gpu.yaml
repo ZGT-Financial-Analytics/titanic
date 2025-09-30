@@ -7,9 +7,11 @@ channels:
   - nvidia
 dependencies:
   - python=3.11
-  - cudatoolkit=11.8
-  - cudf=23.12.*
+  - cudatoolkit=12.4
+  - cudf=24.12.*      # Latest RAPIDS cuDF
   - cupy
+  - dask-cudf         # Distributed GPU processing
+  - cuml              # GPU machine learning
   - pandas=2.3.*
   - pyarrow=17.*
   - numpy
